@@ -26,9 +26,10 @@ def predict(input_dataset, output_dataset):
     num_features = artifacts["features"]["num_features"]
     fl_features = artifacts["features"]["fl_features"]
     cat_features = artifacts["features"]["cat_features"]
-    imputer = artifacts["imputer"]
-    enc = artifacts["enc"]
-    model = artifacts["model"]
+    imputer = artifacts["pipeline"]["preprocessor"]["numerical_transformer"]
+    enc = artifacts["pipeline"]["preprocessor"]["categorical_transformer"]
+    scaler = artifacts["pipeline"]["scaler"]
+    model = artifacts["pipeline"]["model"]
 
     # Extract the used data
     data = data[num_features + fl_features + cat_features]
@@ -48,7 +49,7 @@ def predict(input_dataset, output_dataset):
 
     # Make predictions
     predictions = model.predict(data)
-    predictions = predictions[:10]  # just picking 10 to display sample output :-)
+    # predictions = predictions[:10]  # just picking 10 to display sample output :-)
 
     ### -------- DO NOT TOUCH THE FOLLOWING LINES -------- ###
     # Save the predictions to a CSV file (in order of data input!)

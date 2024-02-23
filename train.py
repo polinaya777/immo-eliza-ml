@@ -1,21 +1,30 @@
 import joblib
+import numpy as np
 import pandas as pd
-from sklearn.impute import SimpleImputer
+from scipy.stats import zscore
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, StandardScaler, MinMaxScaler, PolynomialFeatures
+from sklearn.pipeline import Pipeline
+
+from preprocessing import manual_preprocessing
+
 
 
 def train():
     """Trains a linear regression model on the full dataset and stores output."""
+
     # Load the data
-    data = pd.read_csv("data/properties.csv")
+    data = pd.read_csv("data/model_input.csv")
 
     # Define features to use
-    num_features = ["nbr_frontages"]
-    fl_features = ["fl_terrace"]
-    cat_features = ["equipped_kitchen"]
+    num_features = ['nbr_bedrooms', 'primary_energy_consumption_sqm', 
+                    'total_area_sqm', 'garden_sqm', 'terrace_sqm', 'surface_land_sqm']
+    fl_features = ['fl_furnished', 'fl_terrace', 'fl_garden', 'fl_swimming_pool']
+    cat_features = ['property_type', 'region', 'state_building']
 
     # Split the data into features and target
     X = data[num_features + fl_features + cat_features]
@@ -26,44 +35,44 @@ def train():
         X, y, test_size=0.20, random_state=505
     )
 
-    # Impute missing values using SimpleImputer
-    imputer = SimpleImputer(strategy="mean")
-    imputer.fit(X_train[num_features])
-    X_train[num_features] = imputer.transform(X_train[num_features])
-    X_test[num_features] = imputer.transform(X_test[num_features])
+    # Preprocessing for numerical data
+    numerical_transformer = SimpleImputer(strategy='mean')
+    
+    # Preprocessing for categorical data
+    cat_imputer = SimpleImputer(strategy='most_frequent')
+    enc = OneHotEncoder(handle_unknown='ignore')
+    categorical_transformer = Pipeline(steps=[
+        ('cat_imputer', cat_imputer),
+        ('enc', enc)
+        ])
 
-    # Convert categorical columns with one-hot encoding using OneHotEncoder
-    enc = OneHotEncoder()
-    enc.fit(X_train[cat_features])
-    X_train_cat = enc.transform(X_train[cat_features]).toarray()
-    X_test_cat = enc.transform(X_test[cat_features]).toarray()
+    # Bundle preprocessing for numerical and categorical data
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('numerical_transformer', numerical_transformer, num_features + fl_features),
+            ('categorical_transformer', categorical_transformer, cat_features)
+        ])
 
-    # Combine the numerical and one-hot encoded categorical columns
-    X_train = pd.concat(
-        [
-            X_train[num_features + fl_features].reset_index(drop=True),
-            pd.DataFrame(X_train_cat, columns=enc.get_feature_names_out()),
-        ],
-        axis=1,
-    )
+    # Define the scaler
+    scaler = StandardScaler()
 
-    X_test = pd.concat(
-        [
-            X_test[num_features + fl_features].reset_index(drop=True),
-            pd.DataFrame(X_test_cat, columns=enc.get_feature_names_out()),
-        ],
-        axis=1,
-    )
+    # Define the model
+    model = LinearRegression()
+
+    # Create and evaluate the pipeline (preprocessing and modeling code)
+    my_pipeline = Pipeline(steps=[('preprocessor', preprocessor),
+                                  ('scaler', scaler),
+                                  ('model', model)
+                                  ])
+
+    # Preprocessing of training data, fit model 
+    my_pipeline.fit(X_train, y_train)
 
     print(f"Features: \n {X_train.columns.tolist()}")
 
-    # Train the model
-    model = LinearRegression()
-    model.fit(X_train, y_train)
-
     # Evaluate the model
-    train_score = r2_score(y_train, model.predict(X_train))
-    test_score = r2_score(y_test, model.predict(X_test))
+    train_score = r2_score(y_train, my_pipeline.predict(X_train))
+    test_score = r2_score(y_test, my_pipeline.predict(X_test))
     print(f"Train R² score: {train_score}")
     print(f"Test R² score: {test_score}")
 
@@ -74,12 +83,16 @@ def train():
             "fl_features": fl_features,
             "cat_features": cat_features,
         },
-        "imputer": imputer,
-        "enc": enc,
-        "model": model,
+        "pipeline": {
+            "preprocessor": preprocessor, 
+            "scaler": scaler,
+            "model": model,
+        }
     }
+
     joblib.dump(artifacts, "models/artifacts.joblib")
 
 
 if __name__ == "__main__":
+    manual_preprocessing("data/properties.csv", "data/model_input.csv")
     train()
