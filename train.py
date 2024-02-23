@@ -85,14 +85,7 @@ def train():
             "fl_features": fl_features,
             "cat_features": cat_features,
         },
-        "pipeline": {
-            "preprocessor": {
-                "imputer": numerical_transformer,
-                "enc": categorical_transformer
-            },
-            "scaler": scaler,
-            "model": model,
-        }
+        "pipeline": my_pipeline
     }
 
     joblib.dump(artifacts, "models/artifacts.joblib")
