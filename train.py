@@ -73,8 +73,8 @@ def train():
     print(f"Features: \n {X_train.columns.tolist()}")
 
     # Evaluate the model
-    train_score = r2_score(y_train, my_pipeline.predict(X_train))
-    test_score = r2_score(y_test, my_pipeline.predict(X_test))
+    train_score = r2_score(y_train, pipeline.predict(X_train))
+    test_score = r2_score(y_test, pipeline.predict(X_test))
     print(f"Train R² score: {train_score}")
     print(f"Test R² score: {test_score}")
 
