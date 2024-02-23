@@ -63,12 +63,12 @@ def train():
     model = LinearRegression()
 
     # Create and evaluate the pipeline (preprocessing and modeling code)
-    my_pipeline = Pipeline(steps=[('preprocessor', preprocessor),
+    pipeline = Pipeline(steps=[('preprocessor', preprocessor),
                                   ('model', model)
                                   ])
 
     # Preprocessing of training data, fit model 
-    my_pipeline.fit(X_train, y_train)
+    pipeline.fit(X_train, y_train)
 
     print(f"Features: \n {X_train.columns.tolist()}")
 
@@ -85,7 +85,7 @@ def train():
             "fl_features": fl_features,
             "cat_features": cat_features,
         },
-        "pipeline": my_pipeline
+        "pipeline": pipeline
     }
 
     joblib.dump(artifacts, "models/artifacts.joblib")
