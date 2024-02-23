@@ -36,15 +36,21 @@ def train():
     )
 
     # Preprocessing for numerical data
-    numerical_transformer = SimpleImputer(strategy='mean')
+    imputer = SimpleImputer(strategy='mean')
+    scaler = StandardScaler()
+    numerical_transformer = Pipeline(steps=[
+        ('imputer', imputer),
+        ('scaler', scaler)
+    ])
     
     # Preprocessing for categorical data
     cat_imputer = SimpleImputer(strategy='most_frequent')
-    enc = OneHotEncoder(handle_unknown='ignore')
+    onehot = OneHotEncoder(handle_unknown='ignore')
     categorical_transformer = Pipeline(steps=[
         ('cat_imputer', cat_imputer),
-        ('enc', enc)
+        ('onehot', onehot)
         ])
+    
 
     # Bundle preprocessing for numerical and categorical data
     preprocessor = ColumnTransformer(
@@ -53,15 +59,11 @@ def train():
             ('categorical_transformer', categorical_transformer, cat_features)
         ])
 
-    # Define the scaler
-    scaler = StandardScaler()
-
     # Define the model
     model = LinearRegression()
 
     # Create and evaluate the pipeline (preprocessing and modeling code)
     my_pipeline = Pipeline(steps=[('preprocessor', preprocessor),
-                                  ('scaler', scaler),
                                   ('model', model)
                                   ])
 
@@ -84,7 +86,10 @@ def train():
             "cat_features": cat_features,
         },
         "pipeline": {
-            "preprocessor": preprocessor, 
+            "preprocessor": {
+                "imputer": numerical_transformer,
+                "enc": categorical_transformer
+            },
             "scaler": scaler,
             "model": model,
         }
