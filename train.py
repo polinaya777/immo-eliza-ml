@@ -3,11 +3,12 @@ import numpy as np
 import pandas as pd
 from scipy.stats import zscore
 from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer, KNNImputer
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder, StandardScaler, MinMaxScaler, PolynomialFeatures
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.pipeline import Pipeline
 
 from preprocessing import manual_preprocessing
@@ -15,7 +16,7 @@ from preprocessing import manual_preprocessing
 
 
 def train():
-    """Trains a linear regression model on the full dataset and stores output."""
+    """Trains a model on the full dataset and save the model."""
 
     # Load the data
     data = pd.read_csv("data/model_input.csv")
@@ -25,6 +26,9 @@ def train():
                     'total_area_sqm', 'garden_sqm', 'terrace_sqm', 'surface_land_sqm']
     fl_features = ['fl_furnished', 'fl_terrace', 'fl_garden', 'fl_swimming_pool']
     cat_features = ['property_type', 'region', 'state_building']
+
+    # Shuffle the data
+    data = data.sample(frac=1, random_state=505).reset_index(drop=True)
 
     # Split the data into features and target
     X = data[num_features + fl_features + cat_features]
@@ -36,22 +40,18 @@ def train():
     )
 
     # Preprocessing for numerical data
-    imputer = SimpleImputer(strategy='mean')
-    scaler = StandardScaler()
     numerical_transformer = Pipeline(steps=[
-        ('imputer', imputer),
-        ('scaler', scaler)
+        ('imputer', SimpleImputer(strategy='mean')),
+        ('scaler', StandardScaler())
     ])
     
     # Preprocessing for categorical data
-    cat_imputer = SimpleImputer(strategy='most_frequent')
-    onehot = OneHotEncoder(handle_unknown='ignore')
     categorical_transformer = Pipeline(steps=[
-        ('cat_imputer', cat_imputer),
-        ('onehot', onehot)
+        ('imputer', SimpleImputer(strategy='most_frequent')),
+        ('onehot', OneHotEncoder(handle_unknown='ignore')),
+        ('scaler', StandardScaler(with_mean=False))
         ])
     
-
     # Bundle preprocessing for numerical and categorical data
     preprocessor = ColumnTransformer(
         transformers=[
@@ -60,12 +60,14 @@ def train():
         ])
 
     # Define the model
-    model = LinearRegression()
+    # model = LinearRegression()
+    # model = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=1, random_state=0, loss='absolute_error')
+    model = RandomForestRegressor(n_estimators=100, random_state=505)
 
     # Create and evaluate the pipeline (preprocessing and modeling code)
     pipeline = Pipeline(steps=[('preprocessor', preprocessor),
-                                  ('model', model)
-                                  ])
+                                ('model', model)
+                                ])
 
     # Preprocessing of training data, fit model 
     pipeline.fit(X_train, y_train)
